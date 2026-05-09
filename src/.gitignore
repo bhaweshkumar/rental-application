@@ -61,3 +61,11 @@ venv/
 *.db
 *.sqlite
 *.sqlite3
+
+.venv/
+venv
+src/__pycache__/
+src/*.pyc
+src/*.pyo
+src/*.pyd
+src/.venv/
