@@ -1,5 +1,6 @@
 import streamlit as st
 from market_regulatory_intake import show_market_regulatory_intake
+from acquisition_rehab_modeler import show_acquisition_rehab_modeler
 
 def initialize_session_state():
     """Initializes the session state for the application if not already done."""
@@ -45,6 +46,9 @@ def main():
 
     elif selection == "Feature 1: Market & Regulatory Intake":
         show_market_regulatory_intake()
+
+    elif selection == "Feature 2: Acquisition & Rehab Modeler":
+        show_acquisition_rehab_modeler()
 
     # Placeholder for feature implementations
     elif "Feature" in selection:
