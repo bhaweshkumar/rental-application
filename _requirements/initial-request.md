@@ -1,0 +1,1 @@
+Read the attached books and the rest of the books available on the drive in the Real-Estate-Books-Copy folder to provide me with a structured set of steps for building a real estate rental business. Note I am not a real-estate agent and this is going to be a passive business where i work at my day job, and real estate is just an investment and passive earning.
