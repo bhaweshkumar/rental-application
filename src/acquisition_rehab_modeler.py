@@ -99,14 +99,16 @@ def show_acquisition_rehab_modeler():
         st.subheader("BRRRR / Value-Add Strategy Tracker", divider="blue")
 
         st.markdown("##### Cash-Out Refinance Estimator")
+        refi_defaults = st.session_state.deal_profile.other_details
         refi_ltv_pct = st.slider(
             "Refinance LTV (%)",
             min_value=50,
             max_value=85,
-            value=acq_details.other_details.get("refi_ltv_pct", 75),
+            value=refi_defaults.get("refi_ltv_pct", 75),
             step=1,
             help="Select the Loan-to-Value for the cash-out refinance, typically 75% for DSCR loans."
         )
+        refi_defaults["refi_ltv_pct"] = refi_ltv_pct
 
         # Call the tested business logic
         brrrr = calculate_brrrr_metrics(

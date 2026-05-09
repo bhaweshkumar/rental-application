@@ -1,7 +1,12 @@
 import streamlit as st
 import pandas as pd
 from typing import List
-from src.logic.models import DealProfile
+
+try:
+    from src.logic.models import DealProfile  # type: ignore
+except ImportError:
+    from logic.models import DealProfile  # type: ignore
+
 from logic.crm import save_deals, load_deals
 
 DEALS_FILE = "deals.json"

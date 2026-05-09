@@ -19,8 +19,8 @@ def test_calculate_loan_details():
     "loan_amount, annual_rate_pct, term_years, expected_payment",
     [
         (240000, 6.0, 30, 1438.92), # Standard 30-year mortgage
-        (500000, 7.5, 30, 3496.05),
-        (240000, 6.0, 15, 2024.99), # 15-year mortgage
+        (500000, 7.5, 30, 3496.07),
+        (240000, 6.0, 15, 2025.26), # 15-year mortgage
         (0, 5.0, 30, 0), # Zero loan amount
     ]
 )

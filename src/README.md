@@ -12,29 +12,88 @@ This project is based on the "The Scalable and Passive Rental Property Playbook"
 - **Backend Logic:** Python, Pandas, NumPy
 - **Database:** Local SQLite / JSON
 
-## Setup and Installation
+## Running Under a Virtual Environment
 
-1.  **Clone the repository:**
+Run the app from the repository root:
 
-    ```bash
-    git clone <repository-url>
-    cd rental-application
-    ```
+```bash
+cd /path/to/rental-application
+```
 
-2.  **Create and activate a virtual environment:**
+### 1. Create a virtual environment
 
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-    ```
+```bash
+python3 -m venv .venv
+```
 
-3.  **Install dependencies:**
+### 2. Activate the virtual environment
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+macOS / Linux:
 
-4.  **Run the application:**
-    ```bash
-    streamlit run src/app.py
-    ```
+```bash
+source .venv/bin/activate
+```
+
+Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Windows Command Prompt:
+
+```bat
+.venv\Scripts\activate.bat
+```
+
+### 3. Install dependencies
+
+Upgrade `pip` first, then install the app requirements:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r src/requirements.txt
+```
+
+If you want to run the test suite locally, also install:
+
+```bash
+python -m pip install pytest requests
+```
+
+### 4. Start the Streamlit app
+
+From the repository root:
+
+```bash
+streamlit run src/app.py
+```
+
+Then open the local URL printed by Streamlit, typically:
+
+```text
+http://localhost:8501
+```
+
+### 5. Run tests
+
+```bash
+python -m pytest -q src/test
+```
+
+### 6. Deactivate the virtual environment
+
+```bash
+deactivate
+```
+
+## Troubleshooting
+
+- If `streamlit` is not found, make sure the virtual environment is activated.
+- If dependency installation fails, confirm you are using `src/requirements.txt`, not `requirements.txt` at the repo root.
+- If you changed Python versions, remove `.venv` and recreate it.
+
+## Notes
+
+- The application entrypoint is [app.py](/Users/bhaweshkumar/Projects/internal/rental-application/src/app.py).
+- The Python dependency file currently used by the project is [requirements.txt](/Users/bhaweshkumar/Projects/internal/rental-application/src/requirements.txt).

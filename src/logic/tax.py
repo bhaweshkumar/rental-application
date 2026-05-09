@@ -1,4 +1,7 @@
-from ..shared.models import TaxOptimizationInputs, TaxOptimizationOutputs
+try:
+    from src.shared.models import TaxOptimizationInputs, TaxOptimizationOutputs  # type: ignore
+except ImportError:
+    from shared.models import TaxOptimizationInputs, TaxOptimizationOutputs  # type: ignore
 
 def calculate_depreciation(
     improvement_basis: float,

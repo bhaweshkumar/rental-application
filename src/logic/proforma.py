@@ -1,5 +1,9 @@
 from typing import List
-from ..shared.models import ProformaAssumptions, ProformaYear
+
+try:
+    from src.shared.models import ProformaAssumptions, ProformaYear  # type: ignore
+except ImportError:
+    from shared.models import ProformaAssumptions, ProformaYear  # type: ignore
 
 def generate_proforma(
     initial_gross_rent: float,

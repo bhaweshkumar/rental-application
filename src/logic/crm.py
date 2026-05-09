@@ -1,19 +1,35 @@
 import json
 from typing import List
 from dataclasses import asdict, is_dataclass
-from .src.logic import (
-    DealProfile,
-    PropertyDetails,
-    AcquisitionDetails,
-    CapitalMarketsDetails,
-    UnderwritingInputs,
-    UnderwritingOutputs,
-    ProformaAssumptions,
-    TaxOptimizationInputs,
-    TaxOptimizationOutputs,
-    ProfitFirstInputs,
-    ProfitFirstOutputs,
-)
+
+try:
+    from src.shared.models import (  # type: ignore
+        AcquisitionDetails,
+        CapitalMarketsDetails,
+        DealProfile,
+        ProfitFirstInputs,
+        ProfitFirstOutputs,
+        PropertyDetails,
+        ProformaAssumptions,
+        TaxOptimizationInputs,
+        TaxOptimizationOutputs,
+        UnderwritingInputs,
+        UnderwritingOutputs,
+    )
+except ImportError:
+    from shared.models import (  # type: ignore
+        AcquisitionDetails,
+        CapitalMarketsDetails,
+        DealProfile,
+        ProfitFirstInputs,
+        ProfitFirstOutputs,
+        PropertyDetails,
+        ProformaAssumptions,
+        TaxOptimizationInputs,
+        TaxOptimizationOutputs,
+        UnderwritingInputs,
+        UnderwritingOutputs,
+    )
 
 class DataclassJSONEncoder(json.JSONEncoder):
     """A custom JSON encoder for dataclasses."""

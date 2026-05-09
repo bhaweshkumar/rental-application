@@ -1,4 +1,7 @@
-from ..shared.models import ProfitFirstInputs, ProfitFirstOutputs
+try:
+    from src.shared.models import ProfitFirstInputs, ProfitFirstOutputs  # type: ignore
+except ImportError:
+    from shared.models import ProfitFirstInputs, ProfitFirstOutputs  # type: ignore
 
 def calculate_profit_first_allocations(
     gross_income: float,
