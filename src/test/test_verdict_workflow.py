@@ -179,6 +179,74 @@ def test_get_missing_fields_for_step_blocks_progression_until_required_inputs_pr
     assert "annual_property_taxes" in get_missing_fields_for_step("expenses", deal)
 
 
+@pytest.mark.parametrize("asset_type", ["Condo", "Townhome"])
+def test_get_missing_fields_for_step_requires_hoa_for_condo_and_townhome(asset_type):
+    deal = DealProfile()
+    deal.property_details.asset_type = asset_type
+    deal.expense_line_items.annual_property_taxes = 3000
+    deal.expense_line_items.annual_insurance = 1200
+    deal.expense_line_items.monthly_property_management = 150
+    deal.expense_line_items.monthly_maintenance_reserve = 125
+
+    missing = get_missing_fields_for_step("expenses", deal)
+
+    assert "monthly_hoa" in missing
+
+
+def test_get_missing_fields_for_step_does_not_require_hoa_for_single_family():
+    deal = DealProfile()
+    deal.property_details.asset_type = "Single-Family"
+    deal.expense_line_items.annual_property_taxes = 3000
+    deal.expense_line_items.annual_insurance = 1200
+    deal.expense_line_items.monthly_property_management = 150
+    deal.expense_line_items.monthly_maintenance_reserve = 125
+
+    missing = get_missing_fields_for_step("expenses", deal)
+
+    assert "monthly_hoa" not in missing
+
+
+def test_evaluate_deal_verdict_counts_hoa_in_profitability():
+    purchase_price = 250000
+    deal = DealProfile(
+        property_details=PropertyDetails(
+            address="123 Main St",
+            asset_type="Condo",
+            state="Texas",
+            sq_ft=1100,
+            year_built=2001,
+        ),
+        capital_markets_details=_build_capital_details(
+            purchase_price=purchase_price,
+            ltv_pct=75,
+            rate_pct=7.5,
+            term_years=30,
+            closing_costs_pct=3,
+        ),
+        verdict_inputs=VerdictInputs(
+            monthly_rent=2500,
+            monthly_other_income=0,
+            vacancy_pct=5,
+            rent_ready_repairs=5000,
+        ),
+        expense_line_items=ExpenseLineItems(
+            annual_property_taxes=3600,
+            annual_insurance=1200,
+            monthly_hoa=250,
+            monthly_property_management=150,
+            monthly_maintenance_reserve=125,
+            monthly_owner_paid_utilities=75,
+            monthly_other_expenses=0,
+        ),
+    )
+    deal.acquisition_details.purchase_price = purchase_price
+
+    outputs = evaluate_deal_verdict(deal)
+
+    assert outputs.annual_operating_expenses == pytest.approx(12000, abs=0.01)
+    assert outputs.monthly_cash_flow == pytest.approx(63.97, abs=0.01)
+
+
 def test_apply_verdict_to_underwriting_fields_keeps_legacy_pages_in_sync():
     purchase_price = 250000
     deal = DealProfile(

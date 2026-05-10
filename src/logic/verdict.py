@@ -86,6 +86,11 @@ def get_missing_fields_for_step(step: str, deal: DealProfile) -> List[str]:
             missing.append("annual_property_taxes")
         if deal.expense_line_items.annual_insurance <= 0:
             missing.append("annual_insurance")
+        if (
+            deal.property_details.asset_type in {"Condo", "Townhome"}
+            and deal.expense_line_items.monthly_hoa <= 0
+        ):
+            missing.append("monthly_hoa")
         if deal.expense_line_items.monthly_property_management <= 0:
             missing.append("monthly_property_management")
         if deal.expense_line_items.monthly_maintenance_reserve <= 0:

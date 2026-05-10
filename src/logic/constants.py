@@ -30,5 +30,5 @@ REHAB_COSTS_PER_SQFT = {
     "Heavy (Gut/Studs)": 65,
 }
 
-ASSET_TYPE_OPTIONS = ['Single-Family', '2-Unit', '4-Unit', 'Commercial Multifamily']
+ASSET_TYPE_OPTIONS = ['Single-Family', 'Condo', 'Townhome', '2-Unit', '4-Unit', 'Commercial Multifamily']
 MARKET_PHASE_OPTIONS = ['Recovery', 'Expansion', 'Hyper-Supply', 'Recession']
