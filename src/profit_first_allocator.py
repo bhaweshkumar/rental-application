@@ -78,3 +78,6 @@ def show_profit_first_allocator():
                 f"${opex_delta:,.2f} vs. est. expenses",
                 help=f"The residual cash available to run the property. Your estimated monthly OpEx is ${opex_actual:,.2f}. A positive delta means your TAPs are sustainable; a negative delta means they are not."
             )
+
+    st.success("Profit First allocation model updated.")
+    st.info("This completes the Deep Dive Analysis. Proceed to the **Deal Summary Report** to view a consolidated overview of your deal.")
