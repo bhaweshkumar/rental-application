@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass, field
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 @dataclass
 class PropertyDetails:
@@ -55,6 +55,39 @@ class UnderwritingOutputs:
     cash_on_cash_return: float = 0.0
     total_cash_invested: float = 0.0
 
+
+@dataclass
+class ExpenseLineItems:
+    annual_property_taxes: float = 0.0
+    annual_insurance: float = 0.0
+    monthly_hoa: float = 0.0
+    monthly_property_management: float = 0.0
+    monthly_maintenance_reserve: float = 0.0
+    monthly_owner_paid_utilities: float = 0.0
+    monthly_other_expenses: float = 0.0
+
+
+@dataclass
+class VerdictInputs:
+    monthly_rent: float = 0.0
+    monthly_other_income: float = 0.0
+    vacancy_pct: int = 5
+    rent_ready_repairs: float = 0.0
+
+
+@dataclass
+class VerdictOutputs:
+    annual_operating_expenses: float = 0.0
+    effective_gross_income: float = 0.0
+    noi: float = 0.0
+    monthly_cash_flow: float = 0.0
+    dscr: float = 0.0
+    cap_rate: float = 0.0
+    cash_on_cash_return: float = 0.0
+    total_cash_required: float = 0.0
+    verdict_status: str = "Fail"
+    verdict_reasons: List[str] = field(default_factory=list)
+
 @dataclass
 class ProformaAssumptions:
     holding_period_years: int = 5
@@ -108,6 +141,9 @@ class DealProfile:
     capital_markets_details: CapitalMarketsDetails = field(default_factory=CapitalMarketsDetails)
     underwriting_inputs: UnderwritingInputs = field(default_factory=UnderwritingInputs)
     underwriting_outputs: UnderwritingOutputs = field(default_factory=UnderwritingOutputs)
+    expense_line_items: ExpenseLineItems = field(default_factory=ExpenseLineItems)
+    verdict_inputs: VerdictInputs = field(default_factory=VerdictInputs)
+    verdict_outputs: VerdictOutputs = field(default_factory=VerdictOutputs)
     proforma_assumptions: ProformaAssumptions = field(default_factory=ProformaAssumptions)
     tax_optimization_inputs: TaxOptimizationInputs = field(default_factory=TaxOptimizationInputs)
     tax_optimization_outputs: TaxOptimizationOutputs = field(default_factory=TaxOptimizationOutputs)

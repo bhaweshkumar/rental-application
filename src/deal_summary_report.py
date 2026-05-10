@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from dataclasses import asdict
 from logic.proforma import generate_proforma
+from verdict_summary import render_verdict_summary
 
 def show_deal_summary_report():
     """Displays a consolidated summary report of the active deal."""
@@ -22,6 +23,10 @@ def show_deal_summary_report():
     st.title(prop.address)
     st.caption(f"Status: {deal_profile.status}")
     st.markdown("---")
+
+    if deal_profile.verdict_inputs.monthly_rent > 0 and acq.purchase_price > 0:
+        render_verdict_summary(deal_profile, title="Guided Verdict Summary")
+        st.markdown("---")
 
     # --- Section 1: Acquisition & Value-Add ---
     st.subheader("Acquisition & Value-Add Summary")

@@ -6,6 +6,7 @@ try:
         BrrrrMetrics,
         CapitalMarketsDetails,
         DealProfile,
+        ExpenseLineItems,
         ProfitFirstInputs,
         ProfitFirstOutputs,
         ProformaAssumptions,
@@ -15,6 +16,8 @@ try:
         TaxOptimizationOutputs,
         UnderwritingInputs,
         UnderwritingOutputs,
+        VerdictInputs,
+        VerdictOutputs,
     )
 except ImportError:
     from logic.models import (  # type: ignore
@@ -22,6 +25,7 @@ except ImportError:
         BrrrrMetrics,
         CapitalMarketsDetails,
         DealProfile,
+        ExpenseLineItems,
         ProfitFirstInputs,
         ProfitFirstOutputs,
         ProformaAssumptions,
@@ -31,6 +35,8 @@ except ImportError:
         TaxOptimizationOutputs,
         UnderwritingInputs,
         UnderwritingOutputs,
+        VerdictInputs,
+        VerdictOutputs,
     )
 
 __all__ = [
@@ -38,6 +44,7 @@ __all__ = [
     "BrrrrMetrics",
     "CapitalMarketsDetails",
     "DealProfile",
+    "ExpenseLineItems",
     "ProfitFirstInputs",
     "ProfitFirstOutputs",
     "ProformaAssumptions",
@@ -47,4 +54,6 @@ __all__ = [
     "TaxOptimizationOutputs",
     "UnderwritingInputs",
     "UnderwritingOutputs",
+    "VerdictInputs",
+    "VerdictOutputs",
 ]

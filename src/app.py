@@ -1,4 +1,5 @@
 import streamlit as st
+from deal_verdict_wizard import show_deal_verdict_wizard
 from market_regulatory_intake import show_market_regulatory_intake
 from acquisition_rehab_modeler import show_acquisition_rehab_modeler
 from shared.models import DealProfile
@@ -15,6 +16,8 @@ def initialize_session_state():
     """Initializes the session state for the application if not already done."""
     if 'deal_profile' not in st.session_state:
         st.session_state.deal_profile = DealProfile()
+    if "deal_wizard_step" not in st.session_state:
+        st.session_state.deal_wizard_step = 0
 
 
 def main():
@@ -39,6 +42,7 @@ def main():
     # A dictionary to map feature names to their corresponding functions
     # This makes the navigation logic cleaner and more scalable
     pages = {
+        "Deal Verdict Wizard": show_deal_verdict_wizard,
         "Feature 1: Market & Regulatory Intake": show_market_regulatory_intake,
         "Feature 2: Acquisition & Rehab Modeler": show_acquisition_rehab_modeler,
         "Feature 3: Capital Markets & Leverage Simulator": show_capital_markets_simulator,
@@ -53,8 +57,8 @@ def main():
     # --- Sidebar Navigation ---
     st.sidebar.title("Navigation")
     
-    nav_options = ["Home", "Deal Summary Report"] + list(pages.keys())
-    selection = st.sidebar.radio("Go to", nav_options)
+    nav_options = list(pages.keys()) + ["Deal Summary Report", "Home"]
+    selection = st.sidebar.radio("Go to", nav_options, index=0)
     
     # --- Page Rendering ---
     if selection == "Deal Summary Report":
