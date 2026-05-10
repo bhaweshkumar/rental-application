@@ -411,7 +411,12 @@ def _draft_select(label: str, field_name: str, options, *, help_text: Optional[s
 
 
 def _draft_text(label: str, field_name: str) -> None:
-    st.text_input(label, key=_draft_key(field_name))
+    draft_key = _draft_key(field_name)
+    st.text_input(
+        label,
+        value=st.session_state.get(draft_key, ""),
+        key=draft_key
+    )
 
 
 def _draft_number_input(
@@ -423,12 +428,14 @@ def _draft_number_input(
     step=1,
     help_text: Optional[str] = None,
 ) -> None:
+    draft_key = _draft_key(field_name)
+    
     kwargs = {
         "label": label,
         "min_value": minimum,
-        "value": st.session_state.get(_draft_key(field_name), minimum),
+        "value": st.session_state.get(draft_key, minimum),
         "step": step,
-        "key": _draft_key(field_name),
+        "key": draft_key,
         "help": help_text,
     }
     if maximum is not None:
@@ -445,13 +452,15 @@ def _draft_slider(
     step,
     help_text: Optional[str] = None,
 ) -> None:
+    draft_key = _draft_key(field_name)
+    
     st.slider(
         label,
         min_value=minimum,
         max_value=maximum,
-        value=st.session_state.get(_draft_key(field_name), minimum),
+        value=st.session_state.get(draft_key, minimum),
         step=step,
-        key=_draft_key(field_name),
+        key=draft_key,
         help=help_text,
     )
 
