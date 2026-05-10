@@ -1,12 +1,5 @@
 import streamlit as st
-from shared.models import UnderwritingInputs, UnderwritingOutputs
-from logic.underwriting import (
-    calculate_noi,
-    calculate_cap_rate,
-    calculate_dscr,
-    calculate_cash_on_cash,
-    calculate_total_cash_invested,
-)
+from logic.verdict import refresh_deal_calculations
 
 def show_underwriting_engine():
     """Displays the UI for Feature 4: The Institutional Underwriting Engine."""
@@ -22,45 +15,42 @@ def show_underwriting_engine():
         st.warning("Please complete 'Feature 2: Acquisition' and 'Feature 3: Capital Markets' before underwriting.")
         return
 
-    with st.form("underwriting_form"):
-        st.subheader("Income & Expense Assumptions")
-        inputs = deal_profile.underwriting_inputs
+    st.caption("Changes save automatically and refresh the shared deal state.")
+    st.subheader("Income Assumptions")
 
-        monthly_gross_rent = st.number_input("Projected Monthly Gross Rent", min_value=0, value=inputs.monthly_gross_rent, step=100)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            vacancy_pct = st.slider("Vacancy Rate (%)", 0, 30, inputs.vacancy_pct, 1, help="Percentage of gross rent lost to vacancy and credit loss.")
-        with col2:
-            opex_pct = st.slider("Operating Expenses (OpEx) % of EGI", 10, 60, inputs.opex_pct, 1, help="Includes taxes, insurance, maintenance, management, etc., as a percentage of Effective Gross Income.")
+    verdict_inputs = deal_profile.verdict_inputs
+    baseline_gross_rent = max(verdict_inputs.monthly_rent + verdict_inputs.monthly_other_income, 0)
+    monthly_gross_rent = st.number_input(
+        "Projected Monthly Gross Rent",
+        min_value=0,
+        value=int(baseline_gross_rent),
+        step=100,
+        help="This updates the guided verdict rent assumption while preserving any separate other-income value.",
+    )
 
-        # --- Live Calculations within the form ---
-        annual_gross_rent = monthly_gross_rent * 12
-        egi = annual_gross_rent * (1 - (vacancy_pct / 100.0))
-        operating_expenses = egi * (opex_pct / 100.0)
-        
-        # Call the tested logic functions
-        noi = calculate_noi(annual_gross_rent, vacancy_pct, operating_expenses)
-        total_cash_invested = calculate_total_cash_invested(cap.down_payment, cap.closing_costs, acq.total_rehab_budget)
-        cap_rate = calculate_cap_rate(noi, acq.purchase_price)
-        dscr = calculate_dscr(noi, cap.annual_debt_service)
-        coc_return = calculate_cash_on_cash(noi, cap.annual_debt_service, total_cash_invested)
+    vacancy_pct = st.slider(
+        "Vacancy Rate (%)",
+        0,
+        30,
+        int(verdict_inputs.vacancy_pct),
+        1,
+        help="Percentage of gross rent lost to vacancy and credit loss.",
+    )
 
-        submitted = st.form_submit_button("Run Underwriting & Save")
-        if submitted:
-            deal_profile.underwriting_inputs = UnderwritingInputs(
-                monthly_gross_rent=monthly_gross_rent, vacancy_pct=vacancy_pct, opex_pct=opex_pct,
-            )
-            deal_profile.underwriting_outputs = UnderwritingOutputs(
-                noi=noi, cap_rate_purchase=cap_rate, dscr=dscr,
-                cash_on_cash_return=coc_return, total_cash_invested=total_cash_invested,
-            )
-            st.success("Underwriting analysis complete and saved!")
+    verdict_inputs.monthly_rent = max(monthly_gross_rent - verdict_inputs.monthly_other_income, 0)
+    verdict_inputs.vacancy_pct = vacancy_pct
+    refresh_deal_calculations(deal_profile)
 
     # --- Deal Scorecard Display (outside the form) ---
     outputs = deal_profile.underwriting_outputs
     if outputs.noi > 0:
         st.subheader("The 'Big Four' Deal Scorecard", divider="green")
+
+        implied_opex = deal_profile.underwriting_inputs.opex_pct
+        st.info(
+            f"Operating expenses are being pulled from the shared line-item inputs. "
+            f"Implied OpEx is currently {implied_opex:.2f}% of EGI."
+        )
 
         def get_dscr_color(dscr_value: float) -> str:
             if dscr_value >= 1.3: return "green"

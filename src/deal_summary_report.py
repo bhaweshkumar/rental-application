@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from dataclasses import asdict
 from logic.proforma import generate_proforma
+from logic.verdict import refresh_deal_calculations
 from verdict_summary import render_verdict_summary
 
 def show_deal_summary_report():
@@ -9,6 +10,7 @@ def show_deal_summary_report():
     st.header("Deal Summary Report")
 
     deal_profile = st.session_state.deal_profile
+    refresh_deal_calculations(deal_profile)
     prop = deal_profile.property_details
     acq = deal_profile.acquisition_details
     cap = deal_profile.capital_markets_details

@@ -3,8 +3,7 @@ from typing import Callable, Dict, Optional
 
 import streamlit as st
 
-from logic.financing import calculate_loan_details, calculate_monthly_payment
-from logic.verdict import get_missing_fields_for_step
+from logic.verdict import get_missing_fields_for_step, refresh_deal_calculations
 from shared.constants import ASSET_TYPE_OPTIONS, US_STATES
 from shared.utils import get_safe_index
 from verdict_summary import render_verdict_summary
@@ -179,14 +178,14 @@ def _render_step_navigation() -> None:
             st.rerun()
 
 
-def _show_step_actions(previous_label: Optional[str], submit_label: str) -> bool:
+def _show_step_actions(previous_label: Optional[str], submit_label: str) -> Optional[str]:
     nav_col1, nav_col2 = st.columns(2)
     if previous_label:
         if nav_col1.button(previous_label, use_container_width=True):
-            _go_to_previous_step()
-            st.rerun()
-    with nav_col2:
-        return st.form_submit_button(submit_label, use_container_width=True)
+            return "previous"
+    if nav_col2.button(submit_label, use_container_width=True):
+        return "next"
+    return None
 
 
 def _render_missing_inputs_summary(deal_profile) -> None:
@@ -373,6 +372,11 @@ def _sync_draft_to_profile(deal_profile) -> None:
     )
 
 
+def _refresh_wizard_profile(deal_profile) -> None:
+    _sync_draft_to_profile(deal_profile)
+    refresh_deal_calculations(deal_profile)
+
+
 def _validate_current_step(step_key: str, deal_profile) -> bool:
     missing = get_missing_fields_for_step(step_key, deal_profile)
     if missing:
@@ -387,52 +391,12 @@ def _validate_current_step(step_key: str, deal_profile) -> bool:
 
 
 def _save_step(step_key: str, deal_profile, *, go_next: bool) -> bool:
-    _sync_draft_to_profile(deal_profile)
-    _recalculate_financing(deal_profile)
+    _refresh_wizard_profile(deal_profile)
     if not _validate_current_step(step_key, deal_profile):
         return False
     if go_next:
         _go_to_next_step()
     return True
-
-
-def _recalculate_financing(deal_profile) -> None:
-    capital_details = deal_profile.capital_markets_details
-    purchase_price = float(deal_profile.acquisition_details.purchase_price)
-    financing_mode = deal_profile.other_details.get("wizard_financing_mode", "LTV %")
-
-    if purchase_price <= 0:
-        capital_details.loan_amount = 0.0
-        capital_details.closing_costs = 0.0
-        capital_details.monthly_payment = 0.0
-        capital_details.annual_debt_service = 0.0
-        return
-
-    if financing_mode == "LTV %":
-        loan_amount, down_payment, closing_costs = calculate_loan_details(
-            purchase_price,
-            capital_details.ltv_pct,
-            capital_details.closing_costs_pct,
-        )
-    else:
-        down_payment = _coerce_float(capital_details.down_payment, minimum=0.0, maximum=purchase_price)
-        loan_amount = max(purchase_price - down_payment, 0.0)
-        capital_details.ltv_pct = (
-            int(round((loan_amount / purchase_price) * 100)) if purchase_price else capital_details.ltv_pct
-        )
-        closing_costs = purchase_price * (capital_details.closing_costs_pct / 100.0)
-
-    monthly_payment = calculate_monthly_payment(
-        loan_amount,
-        capital_details.interest_rate_pct,
-        capital_details.term_years,
-    )
-
-    capital_details.loan_amount = loan_amount
-    capital_details.down_payment = down_payment
-    capital_details.closing_costs = closing_costs
-    capital_details.monthly_payment = monthly_payment
-    capital_details.annual_debt_service = monthly_payment * 12
 
 
 def _draft_select(label: str, field_name: str, options, *, help_text: Optional[str] = None) -> None:
@@ -493,39 +457,40 @@ def _draft_slider(
 
 
 def _render_property_step(deal_profile) -> None:
-    with st.form("deal_verdict_property_form"):
-        _draft_text("Property Address", "address")
-        _draft_select("Asset Type", "asset_type", ASSET_TYPE_OPTIONS)
+    _draft_text("Property Address", "address")
+    _draft_select("Asset Type", "asset_type", ASSET_TYPE_OPTIONS)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            _draft_number_input("Square Footage", "sq_ft", minimum=0, step=50)
-        with col2:
-            _draft_number_input("Year Built", "year_built", minimum=1800, maximum=2100, step=1)
+    col1, col2 = st.columns(2)
+    with col1:
+        _draft_number_input("Square Footage", "sq_ft", minimum=0, step=50)
+    with col2:
+        _draft_number_input("Year Built", "year_built", minimum=1800, maximum=2100, step=1)
 
-        _draft_select("State", "state", US_STATES)
-        _draft_number_input("Asking Price", "purchase_price", minimum=0, step=5000)
+    _draft_select("State", "state", US_STATES)
+    _draft_number_input("Asking Price", "purchase_price", minimum=0, step=5000)
 
-        submitted = _show_step_actions(None, "Save Property & Continue")
-        if submitted and _save_step("property", deal_profile, go_next=True):
-            st.rerun()
+    action = _show_step_actions(None, "Continue to Rent")
+    if action == "next" and _save_step("property", deal_profile, go_next=True):
+        st.rerun()
 
 
 def _render_rent_step(deal_profile) -> None:
-    with st.form("deal_verdict_rent_form"):
-        _draft_number_input("Expected Monthly Rent", "monthly_rent", minimum=0.0, step=100.0)
-        _draft_number_input(
-            "Other Monthly Income",
-            "monthly_other_income",
-            minimum=0.0,
-            step=25.0,
-            help_text="Parking, pet rent, laundry, or other recurring monthly income.",
-        )
-        _draft_slider("Vacancy Rate (%)", "vacancy_pct", minimum=0, maximum=20, step=1)
+    _draft_number_input("Expected Monthly Rent", "monthly_rent", minimum=0.0, step=100.0)
+    _draft_number_input(
+        "Other Monthly Income",
+        "monthly_other_income",
+        minimum=0.0,
+        step=25.0,
+        help_text="Parking, pet rent, laundry, or other recurring monthly income.",
+    )
+    _draft_slider("Vacancy Rate (%)", "vacancy_pct", minimum=0, maximum=20, step=1)
 
-        submitted = _show_step_actions("Back to Property", "Save Rent & Continue")
-        if submitted and _save_step("rent", deal_profile, go_next=True):
-            st.rerun()
+    action = _show_step_actions("Back to Property", "Continue to Financing")
+    if action == "previous":
+        _go_to_previous_step()
+        st.rerun()
+    if action == "next" and _save_step("rent", deal_profile, go_next=True):
+        st.rerun()
 
 
 def _render_financing_step(deal_profile) -> None:
@@ -533,136 +498,134 @@ def _render_financing_step(deal_profile) -> None:
         st.warning("Set the asking price first in Step 1.")
         return
 
-    with st.form("deal_verdict_financing_form"):
-        _draft_select("Loan Type", "loan_type", LOAN_TYPE_OPTIONS)
-        _draft_select("Financing Input Mode", "wizard_financing_mode", FINANCING_MODE_OPTIONS)
+    capital_details = deal_profile.capital_markets_details
+    _draft_select("Loan Type", "loan_type", LOAN_TYPE_OPTIONS)
+    _draft_select("Financing Input Mode", "wizard_financing_mode", FINANCING_MODE_OPTIONS)
 
-        financing_mode = st.session_state.get(_draft_key("wizard_financing_mode"), "LTV %")
-        purchase_price = float(_coerce_int(st.session_state.get(_draft_key("purchase_price")), minimum=0))
-        closing_costs_pct = _coerce_int(
-            st.session_state.get(_draft_key("closing_costs_pct")),
-            minimum=0,
-            maximum=7,
-        )
+    financing_mode = st.session_state.get(_draft_key("wizard_financing_mode"), "LTV %")
+    purchase_price = float(_coerce_int(st.session_state.get(_draft_key("purchase_price")), minimum=0))
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if financing_mode == "LTV %":
-                _draft_slider("Loan-to-Value (LTV) %", "ltv_pct", minimum=50, maximum=97, step=1)
-                ltv_pct = _coerce_int(
-                    st.session_state.get(_draft_key("ltv_pct")),
-                    minimum=50,
-                    maximum=97,
-                )
-                loan_amount, down_payment, _ = calculate_loan_details(
-                    purchase_price,
-                    ltv_pct,
-                    closing_costs_pct,
-                )
-            else:
-                _draft_number_input(
-                    "Down Payment ($)",
-                    "down_payment",
-                    minimum=0.0,
-                    maximum=float(purchase_price),
-                    step=5000.0,
-                )
-                down_payment = _coerce_float(
-                    st.session_state.get(_draft_key("down_payment")),
-                    minimum=0.0,
-                    maximum=float(purchase_price),
-                )
-                loan_amount = max(purchase_price - down_payment, 0.0)
-                ltv_pct = int(round((loan_amount / purchase_price) * 100)) if purchase_price else 0
-
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if financing_mode == "LTV %":
+            _draft_slider("Loan-to-Value (LTV) %", "ltv_pct", minimum=50, maximum=97, step=1)
+        else:
             _draft_number_input(
-                "Interest Rate (%)",
-                "interest_rate_pct",
+                "Down Payment ($)",
+                "down_payment",
                 minimum=0.0,
-                maximum=20.0,
-                step=0.125,
+                maximum=float(purchase_price),
+                step=5000.0,
             )
-        with col2:
-            _draft_select("Loan Term (Years)", "term_years", [30, 25, 20, 15])
-            _draft_slider("Closing Costs (%)", "closing_costs_pct", minimum=0, maximum=7, step=1)
-        with col3:
-            closing_costs = purchase_price * (closing_costs_pct / 100.0)
-            st.metric("Loan Amount", f"${loan_amount:,.0f}")
-            st.metric("Down Payment", f"${down_payment:,.0f}")
-            st.metric("Implied LTV", f"{ltv_pct}%")
 
-        monthly_payment = calculate_monthly_payment(
-            loan_amount,
-            _coerce_float(st.session_state.get(_draft_key("interest_rate_pct")), minimum=0.0, maximum=20.0),
-            _coerce_int(st.session_state.get(_draft_key("term_years")), minimum=15, maximum=30),
+        _draft_number_input(
+            "Interest Rate (%)",
+            "interest_rate_pct",
+            minimum=0.0,
+            maximum=20.0,
+            step=0.125,
         )
-        st.info(
-            f"Estimated monthly principal and interest: ${monthly_payment:,.0f}. "
-            f"Estimated cash to close before rent-ready repairs: ${down_payment + closing_costs:,.0f}."
-        )
+    with col2:
+        _draft_select("Loan Term (Years)", "term_years", [30, 25, 20, 15])
+        _draft_slider("Closing Costs (%)", "closing_costs_pct", minimum=0, maximum=7, step=1)
+    with col3:
+        st.metric("Loan Amount", f"${capital_details.loan_amount:,.0f}")
+        st.metric("Down Payment", f"${capital_details.down_payment:,.0f}")
+        st.metric("Implied LTV", f"{capital_details.ltv_pct}%")
 
-        submitted = _show_step_actions("Back to Rent", "Save Financing & Continue")
-        if submitted and _save_step("financing", deal_profile, go_next=True):
-            st.rerun()
+    st.info(
+        f"Estimated monthly principal and interest: ${capital_details.monthly_payment:,.0f}. "
+        f"Estimated cash to close before rent-ready repairs: "
+        f"${capital_details.down_payment + capital_details.closing_costs:,.0f}."
+    )
+
+    action = _show_step_actions("Back to Rent", "Continue to Expenses")
+    if action == "previous":
+        _go_to_previous_step()
+        st.rerun()
+    if action == "next" and _save_step("financing", deal_profile, go_next=True):
+        st.rerun()
 
 
 def _render_expenses_step(deal_profile) -> None:
     asset_type = st.session_state.get(_draft_key("asset_type"), "")
 
-    with st.form("deal_verdict_expenses_form"):
-        st.markdown(
-            "Enter the recurring and one-time costs that affect profitability, cash flow, and the final verdict."
+    st.markdown(
+        "Enter the recurring and one-time costs that affect profitability, cash flow, and the final verdict."
+    )
+    if asset_type in HOA_REQUIRED_ASSET_TYPES:
+        st.info(f"{asset_type} deals require an HOA amount because it affects profitability directly.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        _draft_number_input("Annual Property Taxes", "annual_property_taxes", minimum=0.0, step=250.0)
+        _draft_number_input("Annual Insurance", "annual_insurance", minimum=0.0, step=100.0)
+        _draft_number_input("Monthly HOA", "monthly_hoa", minimum=0.0, step=25.0)
+        _draft_number_input(
+            "Monthly Property Management",
+            "monthly_property_management",
+            minimum=0.0,
+            step=25.0,
         )
-        if asset_type in HOA_REQUIRED_ASSET_TYPES:
-            st.info(f"{asset_type} deals require an HOA amount because it affects profitability directly.")
+    with col2:
+        _draft_number_input(
+            "Monthly Maintenance / Reserve",
+            "monthly_maintenance_reserve",
+            minimum=0.0,
+            step=25.0,
+        )
+        _draft_number_input(
+            "Monthly Owner-Paid Utilities",
+            "monthly_owner_paid_utilities",
+            minimum=0.0,
+            step=25.0,
+        )
+        _draft_number_input(
+            "Other Monthly Expenses",
+            "monthly_other_expenses",
+            minimum=0.0,
+            step=25.0,
+        )
+        _draft_number_input(
+            "One-Time Rent-Ready Repairs",
+            "rent_ready_repairs",
+            minimum=0.0,
+            step=500.0,
+            help_text="Use this for small make-ready work. Heavy rehab is out of scope for this workflow.",
+        )
 
-        col1, col2 = st.columns(2)
-        with col1:
-            _draft_number_input("Annual Property Taxes", "annual_property_taxes", minimum=0.0, step=250.0)
-            _draft_number_input("Annual Insurance", "annual_insurance", minimum=0.0, step=100.0)
-            _draft_number_input("Monthly HOA", "monthly_hoa", minimum=0.0, step=25.0)
-            _draft_number_input(
-                "Monthly Property Management",
-                "monthly_property_management",
-                minimum=0.0,
-                step=25.0,
-            )
-        with col2:
-            _draft_number_input(
-                "Monthly Maintenance / Reserve",
-                "monthly_maintenance_reserve",
-                minimum=0.0,
-                step=25.0,
-            )
-            _draft_number_input(
-                "Monthly Owner-Paid Utilities",
-                "monthly_owner_paid_utilities",
-                minimum=0.0,
-                step=25.0,
-            )
-            _draft_number_input(
-                "Other Monthly Expenses",
-                "monthly_other_expenses",
-                minimum=0.0,
-                step=25.0,
-            )
-            _draft_number_input(
-                "One-Time Rent-Ready Repairs",
-                "rent_ready_repairs",
-                minimum=0.0,
-                step=500.0,
-                help_text="Use this for small make-ready work. Heavy rehab is out of scope for this workflow.",
-            )
+    action = _show_step_actions("Back to Financing", "Continue to Verdict")
+    if action == "previous":
+        _go_to_previous_step()
+        st.rerun()
+    if action == "next" and _save_step("expenses", deal_profile, go_next=True):
+        st.rerun()
 
-        submitted = _show_step_actions("Back to Financing", "Save Expenses & Continue")
-        if submitted and _save_step("expenses", deal_profile, go_next=True):
-            st.rerun()
+
+def _render_live_verdict_preview(deal_profile) -> None:
+    outputs = deal_profile.verdict_outputs
+
+    st.markdown("##### Live Verdict Preview")
+    if outputs.verdict_status == "Pass":
+        st.success("Pass based on the current inputs.")
+    elif outputs.verdict_status == "Caution":
+        st.warning("Caution based on the current inputs.")
+    else:
+        st.error("Fail or incomplete based on the current inputs.")
+
+    preview_cols = st.columns(4)
+    preview_cols[0].metric("Monthly Cash Flow", f"${outputs.monthly_cash_flow:,.0f}")
+    preview_cols[1].metric("DSCR", f"{outputs.dscr:.2f}")
+    preview_cols[2].metric("Cash Required", f"${outputs.total_cash_required:,.0f}")
+    preview_cols[3].metric("Cap Rate", f"{outputs.cap_rate:.2f}%")
+
+    if outputs.verdict_reasons:
+        st.caption(" | ".join(outputs.verdict_reasons))
 
 
 def _render_verdict_step(deal_profile) -> None:
     draft_deal = copy.deepcopy(deal_profile)
-    _sync_draft_to_profile(draft_deal)
-    _recalculate_financing(draft_deal)
+    refresh_deal_calculations(draft_deal)
 
     _render_missing_inputs_summary(draft_deal)
     render_verdict_summary(draft_deal, title="Passive Rental Verdict")
@@ -687,6 +650,7 @@ def show_deal_verdict_wizard() -> None:
     """Displays the primary guided workflow for single-deal passive rental analysis."""
     deal_profile = st.session_state["deal_profile"]
     _ensure_wizard_state(deal_profile)
+    _refresh_wizard_profile(deal_profile)
 
     step_index = st.session_state["deal_wizard_step"]
     step_key, step_label = WIZARD_STEPS[step_index]
@@ -702,4 +666,6 @@ def show_deal_verdict_wizard() -> None:
         "verdict": _render_verdict_step,
     }
     _run_step(step_key, lambda: renderers[step_key](deal_profile))
+    if step_key != "verdict":
+        _render_live_verdict_preview(deal_profile)
     _show_feedback(step_key)

@@ -1,13 +1,12 @@
 import streamlit as st
 
-from logic.verdict import apply_verdict_to_underwriting_fields, evaluate_deal_verdict
+from logic.verdict import refresh_deal_calculations
 
 
 def render_verdict_summary(deal_profile, *, title: str = "Deal Verdict") -> None:
     """Renders the guided verdict report for a single property."""
-    outputs = evaluate_deal_verdict(deal_profile)
-    deal_profile.verdict_outputs = outputs
-    apply_verdict_to_underwriting_fields(deal_profile)
+    refresh_deal_calculations(deal_profile)
+    outputs = deal_profile.verdict_outputs
 
     status = outputs.verdict_status
     st.subheader(title)

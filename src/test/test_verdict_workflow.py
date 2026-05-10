@@ -14,6 +14,7 @@ from src.logic.verdict import (
     classify_verdict,
     evaluate_deal_verdict,
     get_missing_fields_for_step,
+    refresh_deal_calculations,
 )
 
 
@@ -288,3 +289,48 @@ def test_apply_verdict_to_underwriting_fields_keeps_legacy_pages_in_sync():
     assert deal.underwriting_outputs.cash_on_cash_return == pytest.approx(
         deal.verdict_outputs.cash_on_cash_return
     )
+
+
+def test_refresh_deal_calculations_recomputes_financing_verdict_and_underwriting():
+    deal = DealProfile(
+        property_details=PropertyDetails(
+            address="123 Main St",
+            asset_type="Single-Family",
+            sq_ft=1400,
+            year_built=1998,
+            state="Texas",
+        ),
+        verdict_inputs=VerdictInputs(
+            monthly_rent=2500,
+            monthly_other_income=100,
+            vacancy_pct=5,
+            rent_ready_repairs=5000,
+        ),
+        expense_line_items=ExpenseLineItems(
+            annual_property_taxes=3600,
+            annual_insurance=1200,
+            monthly_hoa=0,
+            monthly_property_management=150,
+            monthly_maintenance_reserve=125,
+            monthly_owner_paid_utilities=75,
+            monthly_other_expenses=0,
+        ),
+    )
+    deal.acquisition_details.purchase_price = 250000
+    deal.capital_markets_details.loan_type = "DSCR"
+    deal.capital_markets_details.ltv_pct = 75
+    deal.capital_markets_details.interest_rate_pct = 7.5
+    deal.capital_markets_details.term_years = 30
+    deal.capital_markets_details.closing_costs_pct = 3
+    deal.other_details["wizard_financing_mode"] = "LTV %"
+
+    refresh_deal_calculations(deal)
+
+    assert deal.capital_markets_details.loan_amount == pytest.approx(187500.0)
+    assert deal.capital_markets_details.down_payment == pytest.approx(62500.0)
+    assert deal.capital_markets_details.closing_costs == pytest.approx(7500.0)
+    assert deal.capital_markets_details.monthly_payment == pytest.approx(1311.03, abs=0.01)
+    assert deal.verdict_outputs.verdict_status == "Pass"
+    assert deal.verdict_outputs.monthly_cash_flow == pytest.approx(408.97, abs=0.01)
+    assert deal.underwriting_outputs.noi == pytest.approx(deal.verdict_outputs.noi)
+    assert deal.underwriting_outputs.dscr == pytest.approx(deal.verdict_outputs.dscr)

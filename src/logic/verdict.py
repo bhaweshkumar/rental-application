@@ -1,5 +1,6 @@
 from typing import List, Tuple
 
+from .financing import calculate_loan_details, calculate_monthly_payment
 from .models import DealProfile, ExpenseLineItems, UnderwritingInputs, UnderwritingOutputs, VerdictOutputs
 from .underwriting import (
     calculate_cap_rate,
@@ -145,6 +146,46 @@ def evaluate_deal_verdict(deal: DealProfile) -> VerdictOutputs:
         verdict_status=verdict_status,
         verdict_reasons=verdict_reasons,
     )
+
+
+def refresh_deal_calculations(deal: DealProfile) -> None:
+    """Keeps shared financing, verdict, and underwriting outputs in sync."""
+    capital = deal.capital_markets_details
+    purchase_price = float(deal.acquisition_details.purchase_price)
+    financing_mode = deal.other_details.get("wizard_financing_mode", "LTV %")
+
+    if purchase_price <= 0:
+        capital.loan_amount = 0.0
+        capital.closing_costs = 0.0
+        capital.monthly_payment = 0.0
+        capital.annual_debt_service = 0.0
+    else:
+        if financing_mode == "Down Payment $":
+            down_payment = max(min(float(capital.down_payment), purchase_price), 0.0)
+            loan_amount = max(purchase_price - down_payment, 0.0)
+            capital.ltv_pct = int(round((loan_amount / purchase_price) * 100)) if purchase_price else capital.ltv_pct
+            closing_costs = purchase_price * (capital.closing_costs_pct / 100.0)
+        else:
+            loan_amount, down_payment, closing_costs = calculate_loan_details(
+                purchase_price,
+                capital.ltv_pct,
+                capital.closing_costs_pct,
+            )
+
+        monthly_payment = calculate_monthly_payment(
+            loan_amount,
+            capital.interest_rate_pct,
+            capital.term_years,
+        )
+
+        capital.loan_amount = loan_amount
+        capital.down_payment = down_payment
+        capital.closing_costs = closing_costs
+        capital.monthly_payment = monthly_payment
+        capital.annual_debt_service = monthly_payment * 12
+
+    deal.verdict_outputs = evaluate_deal_verdict(deal)
+    apply_verdict_to_underwriting_fields(deal)
 
 
 def apply_verdict_to_underwriting_fields(deal: DealProfile) -> None:

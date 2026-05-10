@@ -1,4 +1,5 @@
 import importlib
+import inspect
 import sys
 import types
 from pathlib import Path
@@ -88,3 +89,11 @@ def test_run_step_returns_friendly_error_state():
     assert ok is False
     assert "We hit an unexpected error" in wizard._get_step_error("rent")
     assert "bad widget state" in wizard._get_step_error("rent")
+
+
+def test_wizard_steps_no_longer_use_streamlit_forms():
+    wizard = _load_wizard_module()
+    source = inspect.getsource(wizard)
+
+    assert "with st.form(" not in source
+    assert "st.form_submit_button" not in source
