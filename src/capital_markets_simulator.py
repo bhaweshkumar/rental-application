@@ -6,61 +6,72 @@ from logic.verdict import refresh_deal_calculations
 
 def show_capital_markets_simulator():
     """Displays the UI for Feature 3: Capital Markets & Leverage Simulator."""
-    st.header("Feature 3: Capital Markets & Leverage Simulator")
+    st.header("Step 3: Capital Markets & Leverage Simulator")
     st.markdown(
-        "Model different loan types to determine financing costs, down payment, and total cash needed to close."
+        """
+        "Capital Markets" is where you model how you'll pay for the deal. This wizard helps you simulate different loan scenarios to understand your financing costs, 
+        down payment requirements, and the total cash you'll need to bring to the closing table.
+        
+        **Why this is useful:** Leverage (using debt) is a powerful tool in real estate. This simulator lets you play with different leverage levels and interest rates to see how they impact your cash requirements and monthly payments, which are key drivers of profitability.
+        """
     )
 
     deal_profile = st.session_state.deal_profile
     purchase_price = deal_profile.acquisition_details.purchase_price
 
     if purchase_price <= 0:
-        st.warning("Please set a 'Listing/Purchase Price' in Feature 2 before modeling financing.")
+        st.warning("Please set a 'Listing/Purchase Price' in Step 2 before modeling financing.")
         return
 
     st.info(f"Modeling based on a purchase price of **${purchase_price:,.0f}**.")
     st.caption("Changes save automatically and refresh the shared deal state.")
 
-    st.subheader("Loan Assumptions")
+    with st.container(border=True):
+        st.subheader("Loan Assumptions")
+        st.markdown("Define the terms of the loan you expect to get.")
 
-    cap_details = deal_profile.capital_markets_details
-    loan_type_options = ["DSCR", "Conventional", "FHA", "Creative"]
+        cap_details = deal_profile.capital_markets_details
+        loan_type_options = ["DSCR", "Conventional", "FHA", "Creative"]
 
-    loan_type = st.selectbox(
-        "Loan Type",
-        options=loan_type_options,
-        index=get_safe_index(loan_type_options, cap_details.loan_type),
-    )
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        ltv_pct = st.slider("Loan-to-Value (LTV) %", 50, 97, cap_details.ltv_pct, 1)
-    with col2:
-        interest_rate_pct = st.slider(
-            "Interest Rate %",
-            3.0,
-            12.0,
-            cap_details.interest_rate_pct,
-            0.125,
-            format="%.3f%%",
-        )
-    with col3:
-        term_options = [30, 25, 20, 15]
-        term_years = st.selectbox(
-            "Loan Term (Years)",
-            term_options,
-            index=get_safe_index(term_options, cap_details.term_years),
+        loan_type = st.selectbox(
+            "Loan Type",
+            options=loan_type_options,
+            index=get_safe_index(loan_type_options, cap_details.loan_type),
+            help="The type of loan affects qualification criteria and terms. DSCR loans are common for investors."
         )
 
-    closing_costs_pct = st.slider(
-        "Estimated Closing Costs % (of Purchase Price)",
-        0,
-        7,
-        cap_details.closing_costs_pct,
-        1,
-        help="Includes lender fees, title, appraisal, etc. Typically 2-5%.",
-    )
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            ltv_pct = st.slider("Loan-to-Value (LTV) %", 50, 97, cap_details.ltv_pct, 1, help="The percentage of the purchase price the bank will lend you. A higher LTV means less cash down, but a higher monthly payment.")
+        with col2:
+            interest_rate_pct = st.slider(
+                "Interest Rate %",
+                3.0,
+                12.0,
+                cap_details.interest_rate_pct,
+                0.125,
+                format="%.3f%%",
+                help="The cost of borrowing money, expressed as a percentage."
+            )
+        with col3:
+            term_options = [30, 25, 20, 15]
+            term_years = st.selectbox(
+                "Loan Term (Years)",
+                term_options,
+                index=get_safe_index(term_options, cap_details.term_years),
+                help="The length of time you have to repay the loan."
+            )
 
+        closing_costs_pct = st.slider(
+            "Estimated Closing Costs % (of Purchase Price)",
+            0,
+            7,
+            cap_details.closing_costs_pct,
+            1,
+            help="Includes lender fees, title, appraisal, etc. Typically 2-5% of the purchase price.",
+        )
+
+    # --- Calculations ---
     loan_amount, down_payment, closing_costs = calculate_loan_details(
         purchase_price, ltv_pct, closing_costs_pct
     )
@@ -70,6 +81,7 @@ def show_capital_markets_simulator():
     annual_debt_service = monthly_payment * 12
     total_cash_to_close = down_payment + closing_costs + deal_profile.acquisition_details.total_rehab_budget
 
+    # --- Update Session State ---
     st.session_state.deal_profile.capital_markets_details = CapitalMarketsDetails(
         loan_type=loan_type,
         ltv_pct=ltv_pct,
@@ -85,16 +97,23 @@ def show_capital_markets_simulator():
     st.session_state.deal_profile.other_details["wizard_financing_mode"] = "LTV %"
     refresh_deal_calculations(st.session_state.deal_profile)
 
-    st.subheader("Financing Summary", divider="blue")
+    # --- Results Display ---
+    with st.container(border=True):
+        st.subheader("Financing Summary", divider="blue")
+        st.markdown("Based on your assumptions, here's a breakdown of your financing.")
+        mcol1, mcol2, mcol3 = st.columns(3)
+        mcol1.metric("Loan Amount", f"${loan_amount:,.0f}", help="The total amount of money you are borrowing.")
+        mcol2.metric("Down Payment", f"${down_payment:,.0f}", f"{100-ltv_pct}% of Purchase Price", help="The initial cash you must contribute towards the purchase.")
+        mcol3.metric("Monthly P&I", f"${monthly_payment:,.2f}", help="Your monthly Principal and Interest payment. This does not include taxes or insurance (PITI).")
 
-    mcol1, mcol2, mcol3 = st.columns(3)
-    mcol1.metric("Loan Amount", f"${loan_amount:,.0f}")
-    mcol2.metric("Down Payment", f"${down_payment:,.0f}", f"{100-ltv_pct}%")
-    mcol3.metric("Monthly P&I", f"${monthly_payment:,.2f}")
+    with st.container(border=True):
+        st.subheader("Total Capital Required", divider="blue")
+        st.markdown("This is the estimated total cash you need to bring to the deal.")
+        ccol1, ccol2, ccol3, ccol4 = st.columns(4)
+        ccol1.metric("Down Payment", f"${down_payment:,.0f}")
+        ccol2.metric("Closing Costs", f"${closing_costs:,.0f}")
+        ccol3.metric("Rehab Budget", f"${deal_profile.acquisition_details.total_rehab_budget:,.0f}", help="From Step 2")
+        ccol4.metric("TOTAL CASH TO CLOSE", f"${total_cash_to_close:,.0f}", help="Down Payment + Closing Costs + Rehab Budget. This is your total initial investment.")
 
-    st.subheader("Total Capital Required", divider="blue")
-    ccol1, ccol2, ccol3, ccol4 = st.columns(4)
-    ccol1.metric("Down Payment", f"${down_payment:,.0f}")
-    ccol2.metric("Closing Costs", f"${closing_costs:,.0f}")
-    ccol3.metric("Rehab Budget", f"${deal_profile.acquisition_details.total_rehab_budget:,.0f}")
-    ccol4.metric("TOTAL CASH TO CLOSE", f"${total_cash_to_close:,.0f}")
+    st.success("Financing model updated.")
+    st.info("Next, proceed to the **Underwriting Engine** to analyze profitability.")
