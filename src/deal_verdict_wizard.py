@@ -391,7 +391,9 @@ def _validate_current_step(step_key: str, deal_profile) -> bool:
 
 
 def _save_step(step_key: str, deal_profile, *, go_next: bool) -> bool:
-    _refresh_wizard_profile(deal_profile)
+    # Per the state refresh plan, navigation actions should only handle validation
+    # and step changes. Data persistence and recalculation are handled automatically
+    # on each rerun by `_refresh_wizard_profile` at the top of the component.
     if not _validate_current_step(step_key, deal_profile):
         return False
     if go_next:

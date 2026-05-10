@@ -35,39 +35,36 @@ def main():
     removing emotional bias and focusing on the mathematics of the deal.
     """)
     
-    def show_placeholder_page(feature_name):
-        st.header(feature_name)
-        st.write(f"UI and logic for **{feature_name}** will be implemented here.")
-    
-    # A dictionary to map feature names to their corresponding functions
-    # This makes the navigation logic cleaner and more scalable
-    pages = {
-        "Deal Verdict Wizard": show_deal_verdict_wizard,
-        "Feature 1: Market & Regulatory Intake": show_market_regulatory_intake,
-        "Feature 2: Acquisition & Rehab Modeler": show_acquisition_rehab_modeler,
-        "Feature 3: Capital Markets & Leverage Simulator": show_capital_markets_simulator,
-        "Feature 4: The Institutional Underwriting Engine": show_underwriting_engine,
-        "Feature 5: 3-Year Proforma & DCF Generator": show_proforma_generator,
-        "Feature 6: BRRRR Refinance & Tax Optimization": show_tax_optimizer,
-        "Feature 7: 'Profit First' Cash Allocation": show_profit_first_allocator,
-        "Feature 8: Automated Lead Funnel (CRM)": show_crm_funnel,
-        "Feature 9: Data Integration & Settings": show_settings_page,
-    }
-    
-    # --- Sidebar Navigation ---
-    st.sidebar.title("Navigation")
-    
-    nav_options = list(pages.keys()) + ["Deal Summary Report", "Home"]
-    selection = st.sidebar.radio("Go to", nav_options, index=0)
-    
-    # --- Page Rendering ---
-    if selection == "Deal Summary Report":
-        show_deal_summary_report()
-    elif selection in pages:
-        pages[selection]()
-    else: # Default to Home
-        st.header("Welcome to the Underwriting Engine")
+    def home_page():
+        st.header("Welcome")
         st.info("Select a feature from the sidebar to begin analyzing a deal.")
+        st.write("Dashboard content can be displayed here.")
+
+    pages = {
+        "Overview": [
+            st.Page(home_page, title="Dashboard", icon="🏠", default=True)
+        ],
+        "Deal Analysis": [
+            st.Page(show_deal_verdict_wizard, title="Deal Verdict Wizard", icon="⚖️"),
+            st.Page(show_market_regulatory_intake, title="Market & Regulatory", icon="📈"),
+            st.Page(show_acquisition_rehab_modeler, title="Acquisition & Rehab", icon="🛠️"),
+            st.Page(show_capital_markets_simulator, title="Capital Markets", icon="🏦"),
+            st.Page(show_underwriting_engine, title="Underwriting Engine", icon="🧮"),
+            st.Page(show_proforma_generator, title="Proforma & DCF", icon="📄"),
+            st.Page(show_tax_optimizer, title="Tax & Refinance", icon="💰"),
+            st.Page(show_profit_first_allocator, title="Profit Allocation", icon="💸"),
+        ],
+        "Reporting": [
+            st.Page(show_deal_summary_report, title="Deal Summary Report", icon="📊")
+        ],
+        "Management": [
+            st.Page(show_crm_funnel, title="Lead Funnel (CRM)", icon="📧"),
+            st.Page(show_settings_page, title="Settings & Integrations", icon="⚙️"),
+        ]
+    }
+
+    pg = st.navigation(pages)
+    pg.run()
 
 if __name__ == "__main__":
     main()
