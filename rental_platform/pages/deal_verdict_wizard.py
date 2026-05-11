@@ -202,48 +202,98 @@ def _ensure_wizard_drafts(deal_profile) -> None:
 
 
 def _sync_draft_to_profile(deal_profile) -> None:
-    """Writes current draft widget values back into the canonical deal_profile."""
+    """Writes PRESENT draft values from session_state into the canonical deal_profile.
+
+    Keys absent from session_state are intentionally skipped. Streamlit 1.34+ cleans
+    up widget-bound keys for widgets that are no longer rendered (i.e. any step that
+    is not the current one). Without this guard, absent keys fall through coerce_int /
+    coerce_float as None and corrupt the profile with their minimum placeholder values.
+    """
     prop = deal_profile.property_details
     acq = deal_profile.acquisition_details
     vi = deal_profile.verdict_inputs
     cap = deal_profile.capital_markets_details
     exp = deal_profile.expense_line_items
+    ss = st.session_state
 
-    prop.address = str(st.session_state.get(draft_key("address"), "")).strip()
-    prop.asset_type = st.session_state.get(draft_key("asset_type"), prop.asset_type)
-    prop.sq_ft = coerce_int(st.session_state.get(draft_key("sq_ft")), minimum=0)
-    prop.year_built = coerce_int(st.session_state.get(draft_key("year_built")), minimum=1800, maximum=2100)
-    prop.state = st.session_state.get(draft_key("state"), prop.state)
+    if draft_key("address") in ss:
+        prop.address = str(ss[draft_key("address")] or "").strip()
+    if draft_key("asset_type") in ss:
+        prop.asset_type = ss[draft_key("asset_type")]
+    if draft_key("sq_ft") in ss:
+        prop.sq_ft = coerce_int(ss[draft_key("sq_ft")], minimum=0)
+    if draft_key("year_built") in ss:
+        prop.year_built = coerce_int(ss[draft_key("year_built")], minimum=1800, maximum=2100)
+    if draft_key("state") in ss:
+        prop.state = ss[draft_key("state")]
 
-    acq.purchase_price = coerce_int(st.session_state.get(draft_key("purchase_price")), minimum=0)
+    if draft_key("purchase_price") in ss:
+        acq.purchase_price = coerce_int(ss[draft_key("purchase_price")], minimum=0)
 
-    vi.monthly_rent = coerce_float(st.session_state.get(draft_key("monthly_rent")), minimum=0.0)
-    vi.monthly_other_income = coerce_float(st.session_state.get(draft_key("monthly_other_income")), minimum=0.0)
-    vi.vacancy_pct = coerce_int(st.session_state.get(draft_key("vacancy_pct")), minimum=0, maximum=20)
-    vi.rent_ready_repairs = coerce_float(st.session_state.get(draft_key("rent_ready_repairs")), minimum=0.0)
+    if draft_key("monthly_rent") in ss:
+        vi.monthly_rent = coerce_float(ss[draft_key("monthly_rent")], minimum=0.0)
+    if draft_key("monthly_other_income") in ss:
+        vi.monthly_other_income = coerce_float(ss[draft_key("monthly_other_income")], minimum=0.0)
+    if draft_key("vacancy_pct") in ss:
+        vi.vacancy_pct = coerce_int(ss[draft_key("vacancy_pct")], minimum=0, maximum=20)
+    if draft_key("rent_ready_repairs") in ss:
+        vi.rent_ready_repairs = coerce_float(ss[draft_key("rent_ready_repairs")], minimum=0.0)
 
-    deal_profile.other_details["wizard_financing_mode"] = st.session_state.get(
-        draft_key("wizard_financing_mode"), "LTV %"
-    )
-    cap.loan_type = st.session_state.get(draft_key("loan_type"), cap.loan_type)
-    cap.ltv_pct = coerce_int(st.session_state.get(draft_key("ltv_pct")), minimum=50, maximum=97)
-    cap.down_payment = coerce_float(st.session_state.get(draft_key("down_payment")), minimum=0.0)
-    cap.interest_rate_pct = coerce_float(st.session_state.get(draft_key("interest_rate_pct")), minimum=0.0, maximum=20.0)
-    cap.term_years = coerce_int(st.session_state.get(draft_key("term_years")), minimum=15, maximum=30)
-    cap.closing_costs_pct = coerce_int(st.session_state.get(draft_key("closing_costs_pct")), minimum=0, maximum=7)
+    if draft_key("wizard_financing_mode") in ss:
+        deal_profile.other_details["wizard_financing_mode"] = ss[draft_key("wizard_financing_mode")]
+    if draft_key("loan_type") in ss:
+        cap.loan_type = ss[draft_key("loan_type")]
+    if draft_key("ltv_pct") in ss:
+        cap.ltv_pct = coerce_int(ss[draft_key("ltv_pct")], minimum=50, maximum=97)
+    if draft_key("down_payment") in ss:
+        cap.down_payment = coerce_float(ss[draft_key("down_payment")], minimum=0.0)
+    if draft_key("interest_rate_pct") in ss:
+        cap.interest_rate_pct = coerce_float(ss[draft_key("interest_rate_pct")], minimum=0.0, maximum=20.0)
+    if draft_key("term_years") in ss:
+        cap.term_years = coerce_int(ss[draft_key("term_years")], minimum=15, maximum=30)
+    if draft_key("closing_costs_pct") in ss:
+        cap.closing_costs_pct = coerce_int(ss[draft_key("closing_costs_pct")], minimum=0, maximum=7)
 
-    exp.annual_property_taxes = coerce_float(st.session_state.get(draft_key("annual_property_taxes")), minimum=0.0)
-    exp.annual_insurance = coerce_float(st.session_state.get(draft_key("annual_insurance")), minimum=0.0)
-    exp.monthly_hoa = coerce_float(st.session_state.get(draft_key("monthly_hoa")), minimum=0.0)
-    exp.monthly_property_management = coerce_float(st.session_state.get(draft_key("monthly_property_management")), minimum=0.0)
-    exp.monthly_maintenance_reserve = coerce_float(st.session_state.get(draft_key("monthly_maintenance_reserve")), minimum=0.0)
-    exp.monthly_owner_paid_utilities = coerce_float(st.session_state.get(draft_key("monthly_owner_paid_utilities")), minimum=0.0)
-    exp.monthly_other_expenses = coerce_float(st.session_state.get(draft_key("monthly_other_expenses")), minimum=0.0)
+    if draft_key("annual_property_taxes") in ss:
+        exp.annual_property_taxes = coerce_float(ss[draft_key("annual_property_taxes")], minimum=0.0)
+    if draft_key("annual_insurance") in ss:
+        exp.annual_insurance = coerce_float(ss[draft_key("annual_insurance")], minimum=0.0)
+    if draft_key("monthly_hoa") in ss:
+        exp.monthly_hoa = coerce_float(ss[draft_key("monthly_hoa")], minimum=0.0)
+    if draft_key("monthly_property_management") in ss:
+        exp.monthly_property_management = coerce_float(ss[draft_key("monthly_property_management")], minimum=0.0)
+    if draft_key("monthly_maintenance_reserve") in ss:
+        exp.monthly_maintenance_reserve = coerce_float(ss[draft_key("monthly_maintenance_reserve")], minimum=0.0)
+    if draft_key("monthly_owner_paid_utilities") in ss:
+        exp.monthly_owner_paid_utilities = coerce_float(ss[draft_key("monthly_owner_paid_utilities")], minimum=0.0)
+    if draft_key("monthly_other_expenses") in ss:
+        exp.monthly_other_expenses = coerce_float(ss[draft_key("monthly_other_expenses")], minimum=0.0)
+
+
+def _restore_missing_draft_keys(deal_profile) -> None:
+    """Re-populates draft keys that Streamlit's widget-state cleanup removed.
+
+    Must be called AFTER _sync_draft_to_profile so the profile already holds the
+    latest committed values. Only keys absent from session_state are written —
+    present keys (i.e. the current step's in-progress edits) are left untouched.
+    """
+    for field_name, value in _seed_draft_values(deal_profile).items():
+        if draft_key(field_name) not in st.session_state:
+            st.session_state[draft_key(field_name)] = value
 
 
 def _refresh_wizard_profile(deal_profile) -> None:
-    """Syncs drafts → profile then recalculates everything."""
+    """Syncs drafts → profile, restores any cleaned-up draft keys, then recalculates.
+
+    Call order matters:
+      1. _sync_draft_to_profile   — flush present draft keys into the profile.
+      2. _restore_missing_draft_keys — refill absent draft keys from the profile so
+         widget state cleaned up by Streamlit (keys for non-rendered steps) is
+         automatically recovered before the current step renders.
+      3. refresh_deal_calculations — recompute all derived metrics.
+    """
     _sync_draft_to_profile(deal_profile)
+    _restore_missing_draft_keys(deal_profile)
     refresh_deal_calculations(deal_profile)
 
 
