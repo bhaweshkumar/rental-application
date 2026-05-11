@@ -201,73 +201,98 @@ def _ensure_wizard_drafts(deal_profile) -> None:
         mark_wizard_synced()
 
 
-def _sync_draft_to_profile(deal_profile) -> None:
-    """Writes PRESENT draft values from session_state into the canonical deal_profile.
+def _write_field_to_profile(field_name: str, deal_profile) -> None:
+    """Reads a single draft key from session_state and writes it into deal_profile.
 
-    Keys absent from session_state are intentionally skipped. Streamlit 1.34+ cleans
-    up widget-bound keys for widgets that are no longer rendered (i.e. any step that
-    is not the current one). Without this guard, absent keys fall through coerce_int /
-    coerce_float as None and corrupt the profile with their minimum placeholder values.
+    Shared by _sync_draft_to_profile (batch safety net on every render) and
+    _on_field_change (per-widget immediate commit). If the draft key is absent
+    from session_state the function is a no-op — safe to call unconditionally.
     """
+    ss = st.session_state
+    dk = draft_key(field_name)
+    if dk not in ss:
+        return
+    v = ss[dk]
     prop = deal_profile.property_details
     acq = deal_profile.acquisition_details
     vi = deal_profile.verdict_inputs
     cap = deal_profile.capital_markets_details
     exp = deal_profile.expense_line_items
-    ss = st.session_state
 
-    if draft_key("address") in ss:
-        prop.address = str(ss[draft_key("address")] or "").strip()
-    if draft_key("asset_type") in ss:
-        prop.asset_type = ss[draft_key("asset_type")]
-    if draft_key("sq_ft") in ss:
-        prop.sq_ft = coerce_int(ss[draft_key("sq_ft")], minimum=0)
-    if draft_key("year_built") in ss:
-        prop.year_built = coerce_int(ss[draft_key("year_built")], minimum=1800, maximum=2100)
-    if draft_key("state") in ss:
-        prop.state = ss[draft_key("state")]
+    if field_name == "address":
+        prop.address = str(v or "").strip()
+    elif field_name == "asset_type":
+        prop.asset_type = v
+    elif field_name == "sq_ft":
+        prop.sq_ft = coerce_int(v, minimum=0)
+    elif field_name == "year_built":
+        prop.year_built = coerce_int(v, minimum=1800, maximum=2100)
+    elif field_name == "state":
+        prop.state = v
+    elif field_name == "purchase_price":
+        acq.purchase_price = coerce_int(v, minimum=0)
+    elif field_name == "monthly_rent":
+        vi.monthly_rent = coerce_float(v, minimum=0.0)
+    elif field_name == "monthly_other_income":
+        vi.monthly_other_income = coerce_float(v, minimum=0.0)
+    elif field_name == "vacancy_pct":
+        vi.vacancy_pct = coerce_int(v, minimum=0, maximum=20)
+    elif field_name == "rent_ready_repairs":
+        vi.rent_ready_repairs = coerce_float(v, minimum=0.0)
+    elif field_name == "wizard_financing_mode":
+        deal_profile.other_details["wizard_financing_mode"] = v
+    elif field_name == "loan_type":
+        cap.loan_type = v
+    elif field_name == "ltv_pct":
+        cap.ltv_pct = coerce_int(v, minimum=50, maximum=97)
+    elif field_name == "down_payment":
+        cap.down_payment = coerce_float(v, minimum=0.0)
+    elif field_name == "interest_rate_pct":
+        cap.interest_rate_pct = coerce_float(v, minimum=0.0, maximum=20.0)
+    elif field_name == "term_years":
+        cap.term_years = coerce_int(v, minimum=15, maximum=30)
+    elif field_name == "closing_costs_pct":
+        cap.closing_costs_pct = coerce_int(v, minimum=0, maximum=7)
+    elif field_name == "annual_property_taxes":
+        exp.annual_property_taxes = coerce_float(v, minimum=0.0)
+    elif field_name == "annual_insurance":
+        exp.annual_insurance = coerce_float(v, minimum=0.0)
+    elif field_name == "monthly_hoa":
+        exp.monthly_hoa = coerce_float(v, minimum=0.0)
+    elif field_name == "monthly_property_management":
+        exp.monthly_property_management = coerce_float(v, minimum=0.0)
+    elif field_name == "monthly_maintenance_reserve":
+        exp.monthly_maintenance_reserve = coerce_float(v, minimum=0.0)
+    elif field_name == "monthly_owner_paid_utilities":
+        exp.monthly_owner_paid_utilities = coerce_float(v, minimum=0.0)
+    elif field_name == "monthly_other_expenses":
+        exp.monthly_other_expenses = coerce_float(v, minimum=0.0)
 
-    if draft_key("purchase_price") in ss:
-        acq.purchase_price = coerce_int(ss[draft_key("purchase_price")], minimum=0)
 
-    if draft_key("monthly_rent") in ss:
-        vi.monthly_rent = coerce_float(ss[draft_key("monthly_rent")], minimum=0.0)
-    if draft_key("monthly_other_income") in ss:
-        vi.monthly_other_income = coerce_float(ss[draft_key("monthly_other_income")], minimum=0.0)
-    if draft_key("vacancy_pct") in ss:
-        vi.vacancy_pct = coerce_int(ss[draft_key("vacancy_pct")], minimum=0, maximum=20)
-    if draft_key("rent_ready_repairs") in ss:
-        vi.rent_ready_repairs = coerce_float(ss[draft_key("rent_ready_repairs")], minimum=0.0)
+def _on_field_change(field_name: str) -> None:
+    """on_change callback: immediately commits the changed widget field into deal_profile.
 
-    if draft_key("wizard_financing_mode") in ss:
-        deal_profile.other_details["wizard_financing_mode"] = ss[draft_key("wizard_financing_mode")]
-    if draft_key("loan_type") in ss:
-        cap.loan_type = ss[draft_key("loan_type")]
-    if draft_key("ltv_pct") in ss:
-        cap.ltv_pct = coerce_int(ss[draft_key("ltv_pct")], minimum=50, maximum=97)
-    if draft_key("down_payment") in ss:
-        cap.down_payment = coerce_float(ss[draft_key("down_payment")], minimum=0.0)
-    if draft_key("interest_rate_pct") in ss:
-        cap.interest_rate_pct = coerce_float(ss[draft_key("interest_rate_pct")], minimum=0.0, maximum=20.0)
-    if draft_key("term_years") in ss:
-        cap.term_years = coerce_int(ss[draft_key("term_years")], minimum=15, maximum=30)
-    if draft_key("closing_costs_pct") in ss:
-        cap.closing_costs_pct = coerce_int(ss[draft_key("closing_costs_pct")], minimum=0, maximum=7)
+    Streamlit calls this before the next script rerun so the profile is updated
+    atomically with the widget interaction. This is the primary persistence mechanism
+    — on_change fires even when the user jumps tabs before the next render, ensuring
+    Rent, Financing, and Expenses values survive step navigation.
+    """
+    deal_profile = st.session_state["deal_profile"]
+    _write_field_to_profile(field_name, deal_profile)
+    refresh_deal_calculations(deal_profile)
 
-    if draft_key("annual_property_taxes") in ss:
-        exp.annual_property_taxes = coerce_float(ss[draft_key("annual_property_taxes")], minimum=0.0)
-    if draft_key("annual_insurance") in ss:
-        exp.annual_insurance = coerce_float(ss[draft_key("annual_insurance")], minimum=0.0)
-    if draft_key("monthly_hoa") in ss:
-        exp.monthly_hoa = coerce_float(ss[draft_key("monthly_hoa")], minimum=0.0)
-    if draft_key("monthly_property_management") in ss:
-        exp.monthly_property_management = coerce_float(ss[draft_key("monthly_property_management")], minimum=0.0)
-    if draft_key("monthly_maintenance_reserve") in ss:
-        exp.monthly_maintenance_reserve = coerce_float(ss[draft_key("monthly_maintenance_reserve")], minimum=0.0)
-    if draft_key("monthly_owner_paid_utilities") in ss:
-        exp.monthly_owner_paid_utilities = coerce_float(ss[draft_key("monthly_owner_paid_utilities")], minimum=0.0)
-    if draft_key("monthly_other_expenses") in ss:
-        exp.monthly_other_expenses = coerce_float(ss[draft_key("monthly_other_expenses")], minimum=0.0)
+
+def _sync_draft_to_profile(deal_profile) -> None:
+    """Batch-writes all present draft values into the canonical deal_profile.
+
+    Defensive safety net called at the top of every render. Keys absent from
+    session_state are silently skipped via _write_field_to_profile's no-op guard,
+    so the profile is never corrupted with minimum placeholder values. With
+    on_change callbacks covering per-field commits, this function's role is
+    secondary — it catches any edge case where on_change did not fire.
+    """
+    for field_name in _seed_draft_values(deal_profile):
+        _write_field_to_profile(field_name, deal_profile)
 
 
 def _restore_missing_draft_keys(deal_profile) -> None:
@@ -326,6 +351,13 @@ def _save_step(step_key: str, deal_profile, *, go_next: bool) -> bool:
 
 
 # ── widget helpers ───────────────────────────────────────────────────────
+# All helpers pass value=st.session_state.get(dk, minimum) together with
+# key=dk. _restore_missing_draft_keys pre-populates every draft key from the
+# canonical profile before any widget renders, so value== and the stored key
+# always agree. This prevents Streamlit from reinitialising a "returning"
+# widget (one absent in the previous step) to min_value, which would otherwise
+# trigger on_change with an incorrect 0 and corrupt the profile.
+
 def _draft_select(label: str, field_name: str, options, *, help_text: Optional[str] = None) -> None:
     current_value = st.session_state.get(draft_key(field_name), options[0] if options else "")
     st.selectbox(
@@ -334,12 +366,20 @@ def _draft_select(label: str, field_name: str, options, *, help_text: Optional[s
         index=get_safe_index(options, current_value),
         key=draft_key(field_name),
         help=help_text,
+        on_change=_on_field_change,
+        args=(field_name,),
     )
 
 
 def _draft_text(label: str, field_name: str) -> None:
     dk = draft_key(field_name)
-    st.text_input(label, value=st.session_state.get(dk, ""), key=dk)
+    st.text_input(
+        label,
+        value=st.session_state.get(dk, ""),
+        key=dk,
+        on_change=_on_field_change,
+        args=(field_name,),
+    )
 
 
 def _draft_number_input(
@@ -359,6 +399,8 @@ def _draft_number_input(
         "step": step,
         "key": dk,
         "help": help_text,
+        "on_change": _on_field_change,
+        "args": (field_name,),
     }
     if maximum is not None:
         kwargs["max_value"] = maximum
@@ -383,6 +425,8 @@ def _draft_slider(
         step=step,
         key=dk,
         help=help_text,
+        on_change=_on_field_change,
+        args=(field_name,),
     )
 
 
