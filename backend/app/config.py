@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
+    auth_hash_algorithm: str = "bcrypt"
 
     # ── cors ─────────────────────────────────────────────────────────────
     # Comma-separated list of allowed origins.

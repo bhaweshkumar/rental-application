@@ -4,6 +4,9 @@ sqlmodel==0.0.22
 alembic==1.15.2
 pydantic-settings==2.9.1
 python-multipart==0.0.20
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+email-validator==2.0.0
 
 # Testing
 pytest==8.4.2

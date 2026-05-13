@@ -5,7 +5,9 @@ reports routers will be added in Phases 2 and 3.
 """
 from fastapi import APIRouter
 
-api_v1_router = APIRouter()
+from app.auth.router import router as auth_router
 
-# Phase 2 will add: from app.auth.router import auth_router
+api_v1_router = APIRouter()
+api_v1_router.include_router(auth_router)
+
 # Phase 3 will add: from app.routers.v1.deals import deals_router, etc.

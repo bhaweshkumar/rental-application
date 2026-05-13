@@ -29,7 +29,7 @@ def test_all_five_tables_exist(fresh_engine):
     """All expected tables must be present after create_all."""
     inspector = inspect(fresh_engine)
     existing = set(inspector.get_table_names())
-    expected = {"users", "auth_providers", "deals", "deal_verdicts", "reports"}
+    expected = {"users", "auth_providers", "deals", "deal_verdicts", "reports", "refresh_tokens"}
     assert expected.issubset(existing), (
         f"Missing tables: {expected - existing}"
     )
@@ -45,6 +45,12 @@ def test_auth_providers_table_columns(fresh_engine):
     inspector = inspect(fresh_engine)
     cols = {c["name"] for c in inspector.get_columns("auth_providers")}
     assert {"id", "user_id", "provider", "provider_user_id", "hashed_credential"}.issubset(cols)
+
+
+def test_refresh_tokens_table_columns(fresh_engine):
+    inspector = inspect(fresh_engine)
+    cols = {c["name"] for c in inspector.get_columns("refresh_tokens")}
+    assert {"id", "user_id", "token_hash", "expires_at", "revoked"}.issubset(cols)
 
 
 def test_deals_table_has_json_deal_data(fresh_engine):

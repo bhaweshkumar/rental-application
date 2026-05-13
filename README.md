@@ -1,6 +1,8 @@
 # Passive Real Estate Underwriting & Evaluation Engine
 
-An institutional-grade, locally hosted Streamlit application designed to evaluate rental property investments for passive investors. The system removes emotional bias by strictly evaluating the mathematics of a deal — benchmarked against 2026 macroeconomic standards, regulatory environments, and advanced financing structures (DSCR, BRRRR).
+An institutional-grade, locally hosted full-stack application designed to evaluate rental property investments for passive investors. The system removes emotional bias by strictly evaluating the mathematics of a deal — benchmarked against 2026 macroeconomic standards, regulatory environments, and advanced financing structures (DSCR, BRRRR).
+
+The application consists of a Streamlit frontend for user interaction and a FastAPI backend providing REST API services.
 
 ---
 
@@ -9,9 +11,11 @@ An institutional-grade, locally hosted Streamlit application designed to evaluat
 The application is organized into four navigation groups:
 
 ### Overview
+
 - **Dashboard** — Cockpit-style summary of all active deal metrics and portfolio state.
 
 ### Deal Analysis
+
 - **Deal Verdict Wizard** — Step-by-step guided workflow that produces a Go/No-Go verdict with a color-coded risk scorecard.
 - **Market & Regulatory** — Select state and market cycle phase; applies automatic landlord-flexibility risk scores based on eviction timelines.
 - **Acquisition & Rehab Modeler** — Estimate rehab costs by scope (Light / Medium / Heavy), compute all-in acquisition cost, and model BRRRR equity capture.
@@ -22,9 +26,11 @@ The application is organized into four navigation groups:
 - **Profit Allocation** — Implements the "Profit First" cash-management system, auto-calculating monthly account sweeps from gross income.
 
 ### Reporting
+
 - **Deal Summary Report** — Consolidated, printable deal scorecard aggregating all analysis modules.
 
 ### Management
+
 - **Lead Funnel (CRM)** — Pipeline view for tracking prospective deals, with webhook support for Make.com / Zapier integrations.
 - **Settings & Integrations** — Configure API keys and third-party data-source integrations (ARV, rent comps, property data).
 
@@ -32,14 +38,15 @@ The application is organized into four navigation groups:
 
 ## Technology Stack
 
-| Layer | Technology |
-|---|---|
-| UI / Frontend | Streamlit 1.50 |
-| Financial Logic | Python 3.9, NumPy 2.0, NumPy-Financial 1.0, Pandas 2.3 |
-| Charting | Altair 5.5 |
-| Testing | Pytest 8.4 |
-| Data Validation | jsonschema 4.25 |
-| Storage | Local JSON (settings & deal profiles) |
+| Layer           | Technology                                                       |
+| --------------- | ---------------------------------------------------------------- |
+| UI / Frontend   | Streamlit 1.50                                                   |
+| Backend API     | FastAPI 0.115, SQLModel 0.0.22, Alembic 1.15                     |
+| Financial Logic | Python 3.9, NumPy 2.0, NumPy-Financial 1.0, Pandas 2.3           |
+| Charting        | Altair 5.5                                                       |
+| Testing         | Pytest 8.4                                                       |
+| Data Validation | jsonschema 4.25                                                  |
+| Storage         | Local JSON (settings & deal profiles), SQLite (backend database) |
 
 ---
 
@@ -48,6 +55,19 @@ The application is organized into four navigation groups:
 ```
 rental-application/
 ├── app.py                          # Streamlit entry point
+├── backend/                        # FastAPI backend
+│   ├── alembic/                    # Database migrations
+│   ├── alembic.ini                 # Alembic configuration
+│   ├── app/                        # Backend application code
+│   │   ├── config.py               # Settings and configuration
+│   │   ├── database.py             # Database setup and session management
+│   │   ├── main.py                 # FastAPI app factory
+│   │   ├── middleware/             # Custom middleware
+│   │   ├── models/                 # SQLModel database models
+│   │   ├── routers/                # API route handlers
+│   │   └── services/               # Business logic services
+│   ├── requirements.txt            # Backend dependencies
+│   └── tests/                      # Backend tests
 ├── rental_platform/
 │   ├── constants/
 │   │   └── real_estate.py          # Landlord flexibility scores, market phase definitions
@@ -81,7 +101,7 @@ rental-application/
 │   │   └── state_manager.py        # Centralized Streamlit session-state initialization
 │   └── utils/
 │       └── coercion.py             # Type-safe input helpers
-├── tests/                          # Pytest test suite (mirrors services/)
+├── tests/                          # Frontend Pytest test suite (mirrors services/)
 ├── _spec/                          # Software Requirement Specifications (SRS)
 ├── _requirements/                  # Original product requirements
 ├── _plan/                          # Implementation planning documents
@@ -93,49 +113,82 @@ rental-application/
 ## Setup
 
 ### Prerequisites
+
 - Python 3.9+
 - Git
 
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone <repo-url>
    cd rental-application
    ```
 
-2. Create and activate a virtual environment:
+2. Set up the backend:
+
    ```bash
+   cd backend
    python3 -m venv .venv
    source .venv/bin/activate
+   pip install -r requirements.txt
+   # Run database migrations if needed
+   alembic upgrade head
+   cd ..
    ```
 
-3. Install dependencies:
+3. Set up the frontend:
    ```bash
-   pip install streamlit pandas numpy numpy-financial altair pytest jsonschema
+   cd ..
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
    ```
 
 ---
 
 ## Running the Application
 
-```bash
-source .venv/bin/activate
-streamlit run app.py
-```
+1. Start the backend API:
 
-The app will open at `http://localhost:8501` in your browser.
+   ```bash
+   cd backend
+   source .venv/bin/activate
+   uvicorn app.main:create_app --reload --host 0.0.0.0 --port 8000
+   ```
+
+   The API will be available at `http://localhost:8000` with documentation at `http://localhost:8000/docs`.
+
+2. Start the frontend (in a separate terminal):
+   ```bash
+   source .venv/bin/activate
+   streamlit run app.py
+   ```
+   The app will open at `http://localhost:8501` in your browser.
+
+Note: The frontend connects to the backend API for data persistence and additional services.
 
 ---
 
 ## Running Tests
+
+Run frontend tests:
 
 ```bash
 source .venv/bin/activate
 pytest tests/
 ```
 
-All business logic in `rental_platform/services/` has corresponding tests in `tests/`.
+Run backend tests:
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest tests/
+```
+
+All business logic in `rental_platform/services/` and `backend/app/services/` has corresponding tests.
 
 ---
 
@@ -150,11 +203,11 @@ All business logic in `rental_platform/services/` has corresponding tests in `te
 
 ## Core Financial Formulas
 
-| Metric | Formula |
-|---|---|
-| Effective Gross Income (EGI) | `GPR − (GPR × Vacancy Rate)` |
-| Net Operating Income (NOI) | `EGI − Operating Expenses` |
+| Metric                             | Formula                                                       |
+| ---------------------------------- | ------------------------------------------------------------- |
+| Effective Gross Income (EGI)       | `GPR − (GPR × Vacancy Rate)`                                  |
+| Net Operating Income (NOI)         | `EGI − Operating Expenses`                                    |
 | Debt Service Coverage Ratio (DSCR) | `NOI ÷ Annual Debt Service` _(≥1.20 required; ≥1.30 optimal)_ |
-| Cash-on-Cash Return (CoC) | `Cash Flow Before Tax ÷ Total Cash Invested` |
-| Cap Rate | `NOI ÷ Purchase Price` |
-| Cash Flow Before Tax (CFBT) | `NOI − Annual Debt Service` |
+| Cash-on-Cash Return (CoC)          | `Cash Flow Before Tax ÷ Total Cash Invested`                  |
+| Cap Rate                           | `NOI ÷ Purchase Price`                                        |
+| Cash Flow Before Tax (CFBT)        | `NOI − Annual Debt Service`                                   |

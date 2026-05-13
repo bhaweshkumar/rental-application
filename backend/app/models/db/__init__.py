@@ -4,6 +4,7 @@ from .auth_provider import AuthProvider, ProviderType
 from .deal import Deal, DealStatus
 from .deal_verdict import DealVerdict
 from .report import Report
+from .refresh_token import RefreshToken
 
 __all__ = [
     "User",
@@ -13,4 +14,5 @@ __all__ = [
     "DealStatus",
     "DealVerdict",
     "Report",
+    "RefreshToken",
 ]

@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from .auth_provider import AuthProvider
     from .deal import Deal
     from .report import Report
+    from .refresh_token import RefreshToken
 
 
 class User(SQLModel, table=True):
@@ -29,3 +30,4 @@ class User(SQLModel, table=True):
     auth_providers: list["AuthProvider"] = Relationship(back_populates="user")
     deals: list["Deal"] = Relationship(back_populates="user")
     reports: list["Report"] = Relationship(back_populates="user")
+    refresh_tokens: list["RefreshToken"] = Relationship(back_populates="user")
